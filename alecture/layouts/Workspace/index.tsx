@@ -30,9 +30,16 @@ import CreateChannelModal from "@components/CreateChannelModal";
 const Channel = loadable(()=> import('@pages/Channel'));
 const DirectMessage = loadable(()=> import('@pages/DirectMessage'));
 
-const WorkSpace:VFC = () => {
+const WorkSpace:VFC = () => { //VFC는 children을 안쓰는 컴포넌트의 타입, FC는 children을 쓰는 컴포넌트의 타입
     const {workspace,channel} = useParams<{ workspace: string, channel: string }>();
-    const { data:userData, error, revalidate,mutate } = useSWR<IUser | false>('/api/users', fetcher,{dedupingInterval:2000}); // 세번째 자리(dedupingInterval)는 주기적 호출을 막는다.
+    const { data:userData, error, revalidate,mutate } = useSWR<IUser | false>('/api/users', fetcher,{
+        dedupingInterval:2000 
+        /* 
+            dedupingInterval은 캐시의 유지기간이다.
+            dedupingInterval:2000은 2초동안 useSWR로 /api/users을 아무리 많이 요청을 해도 서버에는 딱 한번만 호출한다.
+            나머지 것을은 첫번째 요청한 것에 대한 데이터를 그대로 가져온다. 
+        */
+    }); // 세번째 자리(dedupingInterval)는 주기적 호출을 막는다.
     const {data: channelData} = useSWR<IChannel[]>(userData ? `/api/workspaces/${workspace}/channels`:null, fetcher)
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
@@ -40,10 +47,10 @@ const WorkSpace:VFC = () => {
     const [showCreateChannelModal,setShowCreateChannelModal] = useState(false);
     const [newWorkspace,onChangeNewWorkspace,setNewWorkspace] = useInput('');
     const [newUrl,onChangeNewUrl,setNewUrl] = useInput('');
-    const onLogout = useCallback((e)=>{
+    const onLogout = useCallback((e)=>{ // 함수형 컴포넌트에서 함수를 사용할때는 무조건 useCallback을 사용하자, 그래야 불필요한 리랜더링이 발생안됌.
         e.preventDefault();
         axios.post('/api/users/logout',null,{
-            withCredentials:true // 쿠키를 서로 공유하기 위해
+            withCredentials:true // 백엔드 서버와 프론트 서버의 포트번호가 달라서 쿠키전달이 안돼서 설정. post에서는 3번째에 넣을것. 쿠키를 서로 공유하기 위해
         })
             .then((response)=> {
                 // revalidate(); // SWR을 내가 원할떄만 호춯하도록 커스텀,
@@ -52,7 +59,7 @@ const WorkSpace:VFC = () => {
     },[])
 
     const onCloseUserProfile= useCallback((e)=> {
-        e.stopPropagation();
+        e.stopPropagation(); // 이벤트 버블링 현상 제거
         setShowUserMenu(false);
     },[])
     const onClickUserProfile = useCallback((e)=> {
